@@ -7,7 +7,7 @@ type Order struct {
 	TrackNumber       string    `json:"track_number"`
 	Entry             string    `json:"entry"`
 	Locale            string    `json:"locale"`
-	InternalSignature string    `json:"internal_signatures"`
+	InternalSignature string    `json:"internal_signature"`
 	CustomerID        string    `json:"customer_id"`
 	DeliveryService   string    `json:"delivery_service"`
 	ShardKey          string    `json:"shard_key"`
@@ -36,7 +36,7 @@ type Payment struct {
 	Currency     string  `json:"currency"`
 	Provider     string  `json:"provider_id"`
 	Amount       float64 `json:"amount"`
-	PaymentDt    int64   `json:"payment_id"`
+	PaymentDt    int64   `json:"payment_dt"`
 	Bank         string  `json:"bank"`
 	DeliveryCost float64 `json:"delivery_cost"`
 	GoodsTotal   float64 `json:"goods_total"`
