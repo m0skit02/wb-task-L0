@@ -9,8 +9,8 @@ import (
 	"gorm.io/gorm/logger"
 	"testing"
 	"time"
-	"wb-task-L0/internal/models"
-	"wb-task-L0/internal/repository"
+	"wb-task-L0/pkg/models"
+	"wb-task-L0/pkg/repository"
 )
 
 func newGormMock() (*gorm.DB, sqlmock.Sqlmock, error) {

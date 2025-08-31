@@ -2,7 +2,7 @@ package handler
 
 import (
 	"github.com/gin-gonic/gin"
-	"wb-task-L0/internal/service"
+	"wb-task-L0/pkg/service"
 )
 
 type Handler struct {
@@ -22,7 +22,7 @@ func (h *Handler) InitRoutes() *gin.Engine {
 		{
 			orders.POST("/", h.createOrder)
 			orders.GET("/", h.getAllOrders)
-			orders.GET("/:id", h.getOrderByID)
+			orders.GET("/:id", h.getOrderById)
 			orders.DELETE("/:id", h.deleteOrder)
 		}
 	}

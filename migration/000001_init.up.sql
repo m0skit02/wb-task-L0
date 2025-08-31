@@ -14,8 +14,8 @@ CREATE TABLE orders (
 );
 
 -- Таблица доставки
-CREATE TABLE delivery (
-                          delivery_id   SERIAL PRIMARY KEY,
+CREATE TABLE deliveries (
+                          delivery_id   VARCHAR PRIMARY KEY,
                           order_uid     VARCHAR NOT NULL REFERENCES orders(order_uid) ON DELETE CASCADE,
                           name          VARCHAR NOT NULL,
                           phone         VARCHAR,
@@ -27,8 +27,8 @@ CREATE TABLE delivery (
 );
 
 -- Таблица оплаты
-CREATE TABLE payment (
-                         payment_id    SERIAL PRIMARY KEY,
+CREATE TABLE payments (
+                         payment_id    VARCHAR PRIMARY KEY,
                          order_uid     VARCHAR NOT NULL REFERENCES orders(order_uid) ON DELETE CASCADE,
                          transaction   VARCHAR NOT NULL,
                          request_id    VARCHAR,
@@ -44,7 +44,7 @@ CREATE TABLE payment (
 
 -- Таблица товаров
 CREATE TABLE items (
-                       item_id       SERIAL PRIMARY KEY,
+                       item_id       VARCHAR PRIMARY KEY,
                        order_uid     VARCHAR NOT NULL REFERENCES orders(order_uid) ON DELETE CASCADE,
                        chrt_id       BIGINT NOT NULL,
                        track_number  VARCHAR,

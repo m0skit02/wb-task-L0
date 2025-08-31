@@ -2,11 +2,6 @@ package models
 
 import "time"
 
-func (Delivery) TableDelivery() string { return "delivery" }
-func (Payment) TablePayment() string   { return "payment" }
-func (Item) TableItem() string         { return "items" }
-func (Order) TableOrder() string       { return "orders" }
-
 type Order struct {
 	OrderUID          string    `json:"order_uid" gorm:"column:order_uid;primaryKey"`
 	TrackNumber       string    `json:"track_number" gorm:"column:track_number"`
