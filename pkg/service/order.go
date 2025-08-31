@@ -31,14 +31,12 @@ func (s *OrderService) Create(order *models.Order) (*models.Order, error) {
 	return order, nil
 }
 
-func (s *OrderService) CreateOrderWithAssociations(ctx context.Context, order *models.Order) (*models.Order, error) {
+func (s *OrderService) CreateOrderWithAssociations(ctx context.Context, order *models.Order) error {
 	if err := s.repo.CreateOrderWithAssociations(ctx, order); err != nil {
-		return nil, err
+		return err
 	}
-
 	s.cache.Set(*order)
-
-	return order, nil
+	return nil
 }
 
 func (s *OrderService) GetAll() ([]models.Order, error) {

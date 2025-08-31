@@ -3,6 +3,7 @@ package repository
 import (
 	"context"
 	"gorm.io/gorm"
+	"gorm.io/gorm/clause"
 	"wb-task-L0/pkg/models"
 )
 
@@ -30,22 +31,40 @@ func (r *OrderRepo) Create(order *models.Order) (string, error) {
 
 func (r *OrderRepo) CreateOrderWithAssociations(ctx context.Context, order *models.Order) error {
 	return r.db.WithContext(ctx).Transaction(func(tx *gorm.DB) error {
-		// создаём сам заказ
-		if err := tx.Create(order).Error; err != nil {
+		// Проверяем, есть ли уже заказ
+		var existing models.Order
+		if err := tx.Where("order_uid = ?", order.OrderUID).First(&existing).Error; err == nil {
+			// заказ уже есть, пропускаем вставку
+			return nil
+		}
+
+		// Вставляем заказ
+		if err := tx.Clauses(clause.OnConflict{DoNothing: true}).Create(order).Error; err != nil {
 			return err
 		}
-		// создаём связанные сущности
-		if err := tx.Create(&order.Delivery).Error; err != nil {
+
+		// Вставляем Delivery
+		order.Delivery.DeliveryID = order.Delivery.DeliveryID + "_" + order.OrderUID // уникальный ключ на всякий случай
+		if err := tx.Clauses(clause.OnConflict{DoNothing: true}).Create(&order.Delivery).Error; err != nil {
 			return err
 		}
-		if err := tx.Create(&order.Payment).Error; err != nil {
+
+		// Вставляем Payment
+		order.Payment.PaymentID = order.Payment.PaymentID + "_" + order.OrderUID
+		if err := tx.Clauses(clause.OnConflict{DoNothing: true}).Create(&order.Payment).Error; err != nil {
 			return err
+		}
+
+		// Вставляем Items
+		for i := range order.Items {
+			order.Items[i].ItemID = order.Items[i].ItemID + "_" + order.OrderUID
 		}
 		if len(order.Items) > 0 {
-			if err := tx.Create(&order.Items).Error; err != nil {
+			if err := tx.Clauses(clause.OnConflict{DoNothing: true}).Create(&order.Items).Error; err != nil {
 				return err
 			}
 		}
+
 		return nil
 	})
 }

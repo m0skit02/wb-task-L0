@@ -36,21 +36,22 @@ func (h *Handler) createOrder(c *gin.Context) {
 	})
 }
 
-func (h *Handler) createOrderWith(c *gin.Context) {
+func (h *Handler) createOrderWithAssociations(c *gin.Context) {
 	var input models.Order
 	if err := c.BindJSON(&input); err != nil {
 		newErrorResponse(c, http.StatusBadRequest, err.Error())
 		return
 	}
 
-	order, err := h.services.Order.Create(&input)
-	if err != nil {
+	// сохраняем заказ вместе с ассоциациями
+	if err := h.services.Order.CreateOrderWithAssociations(c.Request.Context(), &input); err != nil {
 		newErrorResponse(c, http.StatusInternalServerError, err.Error())
 		return
 	}
 
+	// берём OrderUID из input, т.к. метод возвращает только error
 	c.JSON(http.StatusOK, gin.H{
-		"id": order.OrderUID,
+		"id": input.OrderUID,
 	})
 }
 

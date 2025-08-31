@@ -71,8 +71,14 @@ func main() {
 	logrus.Print("HTTP server started")
 
 	// Kafka consumer
-	brokers := []string{"localhost:9092"} // замените на реальные адреса
-	topic := "orders"
+	brokerEnv := os.Getenv("KAFKA_BROKER")
+	topicEnv := os.Getenv("KAFKA_TOPIC")
+	if brokerEnv == "" || topicEnv == "" {
+		logrus.Fatal("KAFKA_BROKER or KAFKA_TOPIC is not set in environment")
+	}
+
+	brokers := []string{brokerEnv}
+	topic := topicEnv
 	groupID := "order-consumers"
 
 	consumer := kafka.NewConsumer(brokers, topic, groupID, repos.Order, orderCache)
