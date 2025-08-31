@@ -1,8 +1,9 @@
 package repository
 
 import (
+	"context"
 	"gorm.io/gorm"
-	"wb-task-L0/internal/models"
+	"wb-task-L0/pkg/models"
 )
 
 type OrderRepo struct {
@@ -15,7 +16,6 @@ func NewOrderRepo(db *gorm.DB) *OrderRepo {
 
 func (r *OrderRepo) Create(order *models.Order) (string, error) {
 	err := r.db.Transaction(func(tx *gorm.DB) error {
-		// Сохраняем заказ вместе с зависимостями
 		if err := tx.Create(&order).Error; err != nil {
 			return err
 		}
@@ -26,6 +26,28 @@ func (r *OrderRepo) Create(order *models.Order) (string, error) {
 		return "", err
 	}
 	return order.OrderUID, nil
+}
+
+func (r *OrderRepo) CreateOrderWithAssociations(ctx context.Context, order *models.Order) error {
+	return r.db.WithContext(ctx).Transaction(func(tx *gorm.DB) error {
+		// создаём сам заказ
+		if err := tx.Create(order).Error; err != nil {
+			return err
+		}
+		// создаём связанные сущности
+		if err := tx.Create(&order.Delivery).Error; err != nil {
+			return err
+		}
+		if err := tx.Create(&order.Payment).Error; err != nil {
+			return err
+		}
+		if len(order.Items) > 0 {
+			if err := tx.Create(&order.Items).Error; err != nil {
+				return err
+			}
+		}
+		return nil
+	})
 }
 
 func (r *OrderRepo) GetAll() ([]models.Order, error) {
