@@ -1,0 +1,61 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Order Lookup</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            margin: 40px;
+            background-color: #f9f9f9;
+        }
+        h1 {
+            color: #333;
+        }
+        input, button {
+            padding: 8px;
+            font-size: 16px;
+            margin: 5px 0;
+        }
+        pre {
+            background-color: #eee;
+            padding: 10px;
+            border-radius: 5px;
+            overflow-x: auto;
+        }
+    </style>
+</head>
+<body>
+<h1>Order Lookup</h1>
+<label for="orderId">Enter Order ID:</label><br>
+<input type="text" id="orderId" placeholder="b563feb7b2b84b6test_uniq001">
+<button onclick="getOrder()">Search</button>
+
+<h2>Result:</h2>
+<pre id="result">No data yet...</pre>
+
+<script>
+    async function getOrder() {
+        const orderId = document.getElementById('orderId').value.trim();
+        const resultEl = document.getElementById('result');
+        if (!orderId) {
+            resultEl.textContent = "Please enter an Order ID!";
+            return;
+        }
+
+        try {
+            const response = await fetch(`http://localhost:8080/api/orders/${orderId}`);
+            if (!response.ok) {
+                resultEl.textContent = `Error: ${response.status} ${response.statusText}`;
+                return;
+            }
+
+            const data = await response.json();
+            resultEl.textContent = JSON.stringify(data, null, 2);
+        } catch (err) {
+            resultEl.textContent = `Fetch error: ${err.message}`;
+        }
+    }
+</script>
+</body>
+</html>

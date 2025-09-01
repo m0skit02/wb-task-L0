@@ -19,10 +19,8 @@ func newGormMock() (*gorm.DB, sqlmock.Sqlmock, error) {
 		return nil, nil, err
 	}
 
-	// Говорим sqlmock, что порядок вызовов может быть любым
 	mock.MatchExpectationsInOrder(false)
 
-	// Оборачиваем sqlmock.DB в gorm.DB
 	dialector := postgres.New(postgres.Config{
 		Conn:       db,
 		DriverName: "postgres",
@@ -43,7 +41,6 @@ func TestOrderRepo_Create(t *testing.T) {
 
 	repo := repository.NewOrderRepo(db)
 
-	// Заглушка заказа
 	order := &models.Order{
 		OrderUID:    "order123",
 		TrackNumber: "track456",
@@ -76,10 +73,8 @@ func TestOrderRepo_Create(t *testing.T) {
 		},
 	}
 
-	// --- Ожидания SQL ---
 	mock.ExpectBegin()
 
-	// Insert в orders
 	mock.ExpectExec(`INSERT INTO "orders"`).
 		WithArgs(
 			order.OrderUID,
@@ -91,12 +86,11 @@ func TestOrderRepo_Create(t *testing.T) {
 			order.DeliveryService,
 			order.ShardKey,
 			order.SmID,
-			sqlmock.AnyArg(), // DateCreated
+			sqlmock.AnyArg(),
 			order.OofShard,
 		).
 		WillReturnResult(sqlmock.NewResult(1, 1))
 
-	// Insert в deliveries
 	mock.ExpectExec(`INSERT INTO "deliveries"`).
 		WithArgs(
 			order.Delivery.DeliveryID,
@@ -111,7 +105,6 @@ func TestOrderRepo_Create(t *testing.T) {
 		).
 		WillReturnResult(sqlmock.NewResult(1, 1))
 
-	// Insert в payments
 	mock.ExpectExec(`INSERT INTO "payments"`).
 		WithArgs(
 			order.Payment.PaymentID,
@@ -129,7 +122,6 @@ func TestOrderRepo_Create(t *testing.T) {
 		).
 		WillReturnResult(sqlmock.NewResult(1, 1))
 
-	// Insert в items
 	mock.ExpectExec(`INSERT INTO "items"`).
 		WithArgs(
 			order.Items[0].ItemID,
@@ -150,10 +142,8 @@ func TestOrderRepo_Create(t *testing.T) {
 
 	mock.ExpectCommit()
 
-	// --- Вызов ---
 	gotUID, err := repo.Create(order)
 
-	// --- Проверки ---
 	require.NoError(t, err)
 	require.Equal(t, order.OrderUID, gotUID)
 	require.NoError(t, mock.ExpectationsWereMet())
@@ -165,7 +155,6 @@ func TestOrderRepo_GetAll(t *testing.T) {
 
 	repo := repository.NewOrderRepo(db)
 
-	// Заглушка данных
 	order := models.Order{
 		OrderUID:    "order123",
 		TrackNumber: "track456",
@@ -198,8 +187,6 @@ func TestOrderRepo_GetAll(t *testing.T) {
 		},
 	}
 
-	// --- Моки SQL-запросов GORM ---
-	// 1. Основной SELECT orders
 	rowsOrders := sqlmock.NewRows([]string{
 		"order_uid", "track_number", "entry", "locale", "customer_id", "date_created", "oof_shard",
 	}).AddRow(
@@ -207,7 +194,6 @@ func TestOrderRepo_GetAll(t *testing.T) {
 	)
 	mock.ExpectQuery(`SELECT .* FROM "orders"`).WillReturnRows(rowsOrders)
 
-	// 2. Preload deliveries
 	rowsDelivery := sqlmock.NewRows([]string{
 		"delivery_id", "order_uid", "name",
 	}).AddRow(
@@ -217,7 +203,6 @@ func TestOrderRepo_GetAll(t *testing.T) {
 		WithArgs(order.OrderUID).
 		WillReturnRows(rowsDelivery)
 
-	// 3. Preload payments
 	rowsPayment := sqlmock.NewRows([]string{
 		"payment_id", "order_uid", "transaction", "currency", "amount",
 	}).AddRow(
@@ -227,7 +212,6 @@ func TestOrderRepo_GetAll(t *testing.T) {
 		WithArgs(order.OrderUID).
 		WillReturnRows(rowsPayment)
 
-	// 4. Preload items
 	rowsItems := sqlmock.NewRows([]string{
 		"item_id", "order_uid", "chrt_id", "track_number", "price", "name",
 	}).AddRow(
@@ -237,18 +221,15 @@ func TestOrderRepo_GetAll(t *testing.T) {
 		WithArgs(order.OrderUID).
 		WillReturnRows(rowsItems)
 
-	// --- Вызов ---
 	got, err := repo.GetAll()
 	assert.NoError(t, err)
 
-	// Проверки
 	assert.Len(t, got, 1)
 	assert.Equal(t, order.OrderUID, got[0].OrderUID)
 	assert.Equal(t, order.Delivery.Name, got[0].Delivery.Name)
 	assert.Equal(t, order.Payment.Transaction, got[0].Payment.Transaction)
 	assert.Equal(t, order.Items[0].Name, got[0].Items[0].Name)
 
-	// Проверяем что все моки сработали
 	assert.NoError(t, mock.ExpectationsWereMet())
 }
 
@@ -258,7 +239,6 @@ func TestOrderRepo_GetByID(t *testing.T) {
 
 	repo := repository.NewOrderRepo(db)
 
-	// Заглушка
 	order := models.Order{
 		OrderUID:    "order123",
 		TrackNumber: "track456",
@@ -291,8 +271,6 @@ func TestOrderRepo_GetByID(t *testing.T) {
 		},
 	}
 
-	// --- Моки SQL-запросов ---
-	// 1. SELECT из orders
 	rowsOrders := sqlmock.NewRows([]string{
 		"order_uid", "customer_id", "track_number",
 	}).AddRow(order.OrderUID, order.CustomerID, order.TrackNumber)
@@ -301,7 +279,6 @@ func TestOrderRepo_GetByID(t *testing.T) {
 		WithArgs(order.OrderUID, 1).
 		WillReturnRows(rowsOrders)
 
-	// 2. Preload Delivery
 	rowsDelivery := sqlmock.NewRows([]string{
 		"delivery_id", "order_uid", "name",
 	}).AddRow(
@@ -311,7 +288,6 @@ func TestOrderRepo_GetByID(t *testing.T) {
 		WithArgs(order.OrderUID).
 		WillReturnRows(rowsDelivery)
 
-	// 3. Preload Payment
 	rowsPayment := sqlmock.NewRows([]string{
 		"payment_id", "order_uid", "transaction", "currency", "amount",
 	}).AddRow(
@@ -321,7 +297,6 @@ func TestOrderRepo_GetByID(t *testing.T) {
 		WithArgs(order.OrderUID).
 		WillReturnRows(rowsPayment)
 
-	// 4. Preload Items
 	rowsItems := sqlmock.NewRows([]string{
 		"item_id", "order_uid", "chrt_id", "track_number", "price", "name",
 	}).AddRow(
@@ -333,17 +308,14 @@ func TestOrderRepo_GetByID(t *testing.T) {
 		WithArgs(order.OrderUID).
 		WillReturnRows(rowsItems)
 
-	// --- Вызов ---
 	got, err := repo.GetByID(order.OrderUID)
 	assert.NoError(t, err)
 
-	// Проверки
 	assert.Equal(t, order.OrderUID, got.OrderUID)
 	assert.Equal(t, order.Delivery.Name, got.Delivery.Name)
 	assert.Equal(t, order.Payment.Transaction, got.Payment.Transaction)
 	assert.Equal(t, order.Items[0].Name, got.Items[0].Name)
 
-	// Убеждаемся, что все моки сработали
 	assert.NoError(t, mock.ExpectationsWereMet())
 }
 
@@ -354,35 +326,28 @@ func TestOrderRepo_Delete(t *testing.T) {
 	repo := repository.NewOrderRepo(db)
 	orderUID := "order123"
 
-	// --- Моки SQL-запросов ---
 	mock.ExpectBegin()
 
-	// 1. Delete items
 	mock.ExpectExec(`DELETE FROM "items" WHERE order_uid = \$1`).
 		WithArgs(orderUID).
 		WillReturnResult(sqlmock.NewResult(0, 1))
 
-	// 2. Delete payments
 	mock.ExpectExec(`DELETE FROM "payments" WHERE order_uid = \$1`).
 		WithArgs(orderUID).
 		WillReturnResult(sqlmock.NewResult(0, 1))
 
-	// 3. Delete deliveries
 	mock.ExpectExec(`DELETE FROM "deliveries" WHERE order_uid = \$1`).
 		WithArgs(orderUID).
 		WillReturnResult(sqlmock.NewResult(0, 1))
 
-	// 4. Delete order
 	mock.ExpectExec(`DELETE FROM "orders" WHERE order_uid = \$1`).
 		WithArgs(orderUID).
 		WillReturnResult(sqlmock.NewResult(0, 1))
 
 	mock.ExpectCommit()
 
-	// --- Вызов ---
 	err = repo.Delete(orderUID)
 	assert.NoError(t, err)
 
-	// Проверки
 	assert.NoError(t, mock.ExpectationsWereMet())
 }

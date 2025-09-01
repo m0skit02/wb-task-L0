@@ -15,7 +15,6 @@ type Order struct {
 	DateCreated       time.Time `json:"date_created" gorm:"column:date_created"`
 	OofShard          string    `json:"oof_shard" gorm:"column:oof_shard"`
 
-	// Ассоциации
 	Delivery Delivery `json:"delivery" gorm:"foreignKey:OrderUID;references:OrderUID"`
 	Payment  Payment  `json:"payment" gorm:"foreignKey:OrderUID;references:OrderUID"`
 	Items    []Item   `json:"items" gorm:"foreignKey:OrderUID;references:OrderUID"`

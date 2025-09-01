@@ -13,7 +13,7 @@ import (
 
 type Consumer struct {
 	reader    *kafka.Reader
-	orderRepo repository.Order // теперь интерфейс, а не конкретная структура
+	orderRepo repository.Order
 	cache     *cache.OrderCache
 }
 
@@ -62,7 +62,6 @@ func (c *Consumer) Start(ctx context.Context) {
 
 			if err := c.orderRepo.CreateOrderWithAssociations(ctx, &order); err != nil {
 				log.Printf("failed to save order in DB: %v", err)
-				// можно добавить retry, но пока пропускаем
 			} else {
 				c.cache.Set(order)
 				log.Printf("order saved successfully: %s", order.OrderUID)

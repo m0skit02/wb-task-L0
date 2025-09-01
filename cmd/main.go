@@ -2,6 +2,7 @@ package main
 
 import (
 	"context"
+	"github.com/gin-gonic/gin"
 	"os"
 	"os/signal"
 	"syscall"
@@ -22,17 +23,14 @@ import (
 func main() {
 	logrus.SetFormatter(new(logrus.JSONFormatter))
 
-	// Загружаем конфиги
 	if err := initConfig(); err != nil {
 		logrus.Fatalf("error initializing configs: %s", err.Error())
 	}
 
-	// Загружаем переменные окружения
 	if err := godotenv.Load(); err != nil {
 		logrus.Fatalf("error loading env variables: %s", err.Error())
 	}
 
-	// Инициализация БД
 	db, err := repository.NewPostgresDB(repository.Config{
 		Host:     viper.GetString("db.host"),
 		Port:     viper.GetString("db.port"),
@@ -45,11 +43,9 @@ func main() {
 		logrus.Fatalf("failed to initialize db: %s", err.Error())
 	}
 
-	// Репозитории и кэш
 	repos := repository.NewRepository(db)
 	orderCache := cache.NewCache()
 
-	// Загружаем кэш из БД
 	orders, err := repos.Order.GetAll()
 	if err != nil {
 		logrus.Fatalf("failed to load orders: %v", err)
@@ -57,26 +53,33 @@ func main() {
 	orderCache.LoadFromDB(orders)
 	logrus.Printf("Cache initialized with %d orders", orderCache.Len())
 
-	// Сервисы и HTTP хендлеры
 	services := service.NewService(repos, orderCache)
 	handlers := handler.NewHandler(services)
 
-	// HTTP сервер
-	srv := new(wb_task_L0.Server)
+	router := gin.New()
+	router.Use(gin.Recovery(), gin.Logger())
+
+	router.Static("/static", "./web")
+	router.GET("/", func(c *gin.Context) {
+		c.File("./web/front.html")
+	})
+
+	apiRoutes := handlers.InitRoutes()
+	router.Any("/api/*any", gin.WrapH(apiRoutes))
+
+	srv := &wb_task_L0.Server{}
 	go func() {
-		if err := srv.Run(viper.GetString("port"), handlers.InitRoutes()); err != nil {
+		if err := srv.Run(viper.GetString("port"), router); err != nil {
 			logrus.Fatalf("error occured while running http server: %s", err.Error())
 		}
 	}()
 	logrus.Print("HTTP server started")
 
-	// Kafka consumer
 	brokerEnv := os.Getenv("KAFKA_BROKER")
 	topicEnv := os.Getenv("KAFKA_TOPIC")
 	if brokerEnv == "" || topicEnv == "" {
 		logrus.Fatal("KAFKA_BROKER or KAFKA_TOPIC is not set in environment")
 	}
-
 	brokers := []string{brokerEnv}
 	topic := topicEnv
 	groupID := "order-consumers"
@@ -87,24 +90,20 @@ func main() {
 	go consumer.Start(ctx)
 	logrus.Print("Kafka consumer started")
 
-	// Ожидание сигнала завершения
 	quit := make(chan os.Signal, 1)
 	signal.Notify(quit, syscall.SIGTERM, syscall.SIGINT)
 	<-quit
 	logrus.Print("Shutting down application...")
 
-	// Остановка Kafka consumer
 	cancel()
 	if err := consumer.Close(); err != nil {
 		logrus.Errorf("error closing Kafka consumer: %s", err.Error())
 	}
 
-	// Остановка HTTP сервера
 	if err := srv.Shutdown(context.Background()); err != nil {
 		logrus.Errorf("error occured on server shutting down: %s", err.Error())
 	}
 
-	// Закрытие соединения с БД
 	sqlDB, err := db.DB()
 	if err != nil {
 		logrus.Errorf("failed to get sql.DB from gorm: %s", err.Error())
@@ -114,7 +113,6 @@ func main() {
 		}
 	}
 
-	// Миграции (на всякий случай)
 	if err := db.AutoMigrate(&models.Order{}, &models.Delivery{}, &models.Payment{}, &models.Item{}); err != nil {
 		logrus.Fatalf("failed to migrate: %s", err.Error())
 	}
